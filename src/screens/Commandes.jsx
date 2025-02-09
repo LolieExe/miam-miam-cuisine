@@ -56,13 +56,27 @@ export default function Commandes({ navigation }) {
     fetchOrders();
   }, [userId]);
 
+  
   const handleRecuperer = async (orderId) => {
     try {
+      const updatedOrderData = {
+        status: "delivered"
+      };
       // Call API to update order status to picked up
-      await axios.post(`https://miammiam3-production.up.railway.app/api/orders/${orderId}/pickup`);
+      await axios.patch(`https://miammiam3-production.up.railway.app/api/orders/${orderId}`, updatedOrderData, {
+        headers: {
+          'Content-Type': 'application/merge-patch+json',
+          'Accept': 'application/ld+json'
+        }
+      });
       
-      // Update local state or show a success message
       Alert.alert("Success", "Order picked up successfully!");
+
+      setOrders((prevOrders) =>
+        prevOrders.map(order =>
+          order.id === orderId ? { ...order, status: "delivered" } : order
+        )
+      );
     } catch (error) {
       console.error("Error picking up order:", error);
       Alert.alert("Error", "Failed to pick up the order.");
@@ -101,7 +115,13 @@ export default function Commandes({ navigation }) {
       </View>
       <ScrollView>
         {orders.map((order, index) => (
+          
           <View style={styles.viewStyle} key={index}>
+            {order.status === "cooked" && (
+                  <TouchableOpacity style={styles.recoverButton} onPress={() => handleRecuperer(order.id)}>
+                    <Text style={styles.buttonText}>RECUPERER</Text>
+                  </TouchableOpacity>
+            )}
             <Text style={styles.textCommande}>Order ID: {order.id}</Text>
             {orderItems[index]?.map((orderItem, idx) => (
               <View key={idx}>
@@ -111,11 +131,6 @@ export default function Commandes({ navigation }) {
                   quantite={orderItem.quantity}
                 />
                 
-                {order.status === "delivered" && (
-                  <TouchableOpacity style={styles.recoverButton} onPress={() => handleRecuperer(order.id)}>
-                    <Text style={styles.buttonText}>RECUPERER</Text>
-                  </TouchableOpacity>
-                )}
               </View>
             ))}
           </View>

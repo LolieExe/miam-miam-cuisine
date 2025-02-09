@@ -39,7 +39,6 @@ export default function Cart({ navigation }) {
         }
       });
       const orderIri = orderResponse.data['@id'];
-
       // Create order items and kitchen items
       const orderItemPromises = userCart.map(async (item) => {
         const orderItemData = {
@@ -121,6 +120,7 @@ export default function Cart({ navigation }) {
       </View>
       <View style={styles.panierText}>
         <Text style={styles.textPanier}>PANIER</Text>
+
       </View>
       {userCart.map((item, index) => (
         <View key={index} style={styles.cartItem}>
