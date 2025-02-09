@@ -1,8 +1,10 @@
 import React, { useContext, useEffect } from 'react';
-import { Text, View, StyleSheet, TouchableOpacity, Button, Alert, Dimensions, Image } from 'react-native';
+import { Text, View, StyleSheet, TouchableOpacity, Alert, Dimensions, Image } from 'react-native';
 import { CartContext } from '../components/organics/CartContext';
+import axios from 'axios';
 
 const { width, height } = Dimensions.get('window');
+
 export default function Cart({ navigation }) {
   const { cart, updateQuantity, removeFromCart, clearCart, userId } = useContext(CartContext);
 
@@ -13,21 +15,99 @@ export default function Cart({ navigation }) {
   const userCart = cart.filter(item => item.userId === userId);
   const totalPrice = userCart.reduce((total, item) => total + item.prixPlat * item.quantity, 0);
 
-  const handleCheckout = () => {
-    Alert.alert('Checkout', `Total: ${totalPrice} AR`, [
-      { text: 'OK', onPress: () => clearCart() },
-    ]);
+  const handleCheckout = async () => {
+    try {
+    
+      const userResponse = await axios.get(`https://miammiam3-production.up.railway.app/api/users/firebase/${userId}`);
+      const user = userResponse.data;
+
+      // Prepare initial order data without orderItems
+      const initialOrderData = {
+        utilisateur: `/api/users/${user.id}`,
+        totalAmount: totalPrice.toFixed(2),
+        status: "paid",
+        createdAt: new Date().toISOString(),
+        orderItems: []
+      };
+
+      // Create the order
+      const orderResponse = await axios.post('https://miammiam3-production.up.railway.app/api/orders', initialOrderData, {
+        headers: {
+          'Content-Type': 'application/ld+json',
+          'Allow-Control-Allow-Origin': '*',
+          'Accept':'application/ld+json'
+        }
+      });
+      const orderIri = orderResponse.data['@id'];
+
+      // Create order items and kitchen items
+      const orderItemPromises = userCart.map(async (item) => {
+        const orderItemData = {
+          commande: orderIri,
+          dish: `${item.id}`,
+          quantity: item.quantity
+        };
+        const orderItemResponse = await axios.post('https://miammiam3-production.up.railway.app/api/order_items', orderItemData, {
+          headers: {
+            'Content-Type': 'application/ld+json',
+            'Allow-Control-Allow-Origin': '*',
+             'Accept':'application/ld+json'
+          }
+        });
+        const orderItemIri = orderItemResponse.data['@id'];
+
+        // Create kitchen items for each quantity of the dish
+        const kitchenItemPromises = Array.from({ length: item.quantity }).map(async () => {
+          const kitchenItemData = {
+            commande: orderIri,
+            dish: `${item.id}`,
+            status: "pending",
+            quantity: 1
+          };
+          const kitchenItemResponse = await axios.post('https://miammiam3-production.up.railway.app/api/kitchen_items', kitchenItemData, {
+            headers: {
+              'Content-Type': 'application/ld+json',
+              'Allow-Control-Allow-Origin': '*',
+               'Accept':'application/ld+json'
+            }
+          });
+          return kitchenItemResponse.data['@id'];
+        });
+
+        await Promise.all(kitchenItemPromises);
+        return orderItemIri;
+      });
+
+      const orderItems = await Promise.all(orderItemPromises);
+
+      const updatedOrderData = {
+        orderItems: orderItems
+      };
+
+      await axios.put(orderIri, updatedOrderData, {
+        headers: {
+          'Content-Type': 'application/ld+json',
+          'Accept':'application/ld+json'
+        }
+      });
+
+      console.log('Order saved to backend:', orderResponse.data);
+      clearCart();
+    } 
+    catch (error) 
+    {
+        clearCart();
+    }
   };
 
   return (
     <View style={styles.container}>
-
       <View style={styles.header}>
         <View style={styles.cartContainer}>
-            <TouchableOpacity onPress={() => navigation.navigate('User')}>
-              <Image source={require('../assets/images/User.png')} style={styles.cartImage} />
-              <Text style={styles.cart}>User</Text>
-            </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('User')}>
+            <Image source={require('../assets/images/User.png')} style={styles.cartImage} />
+            <Text style={styles.cart}>User</Text>
+          </TouchableOpacity>
         </View>
         <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.cartContainer}>
           <Image source={require('../assets/images/ShoppingCart.png')} style={styles.cartImage} />
@@ -66,9 +146,9 @@ export default function Cart({ navigation }) {
       ))}
       <View style={styles.checkoutContainer}>
         <Text style={styles.totalText}>Total: {totalPrice} AR</Text>
-        <View style={styles.buttonContainer}>
-          <Button title="PAYER" onPress={handleCheckout} color="#FFFFFF" />
-        </View>
+        <TouchableOpacity onPress={handleCheckout} style={styles.buttonContainer}>
+          <Text style={styles.textPayer}>PAYER</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -82,18 +162,18 @@ const styles = StyleSheet.create({
   },
   header: {
     marginTop: 20,
-    display:'flex',
+    display: 'flex',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
   },
-  cart:{
-    color:'#918CFE',
+  cart: {
+    color: '#918CFE',
     fontSize: width * 0.05,
   },
-  cartContainer:{
-    display:'flex',
+  cartContainer: {
+    display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -108,7 +188,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 16,
-    color: '#796120'
+    color: '#796120',
   },
   quantityContainer: {
     flexDirection: 'row',
@@ -127,7 +207,7 @@ const styles = StyleSheet.create({
   quantityText: {
     fontSize: 16,
     marginHorizontal: 10,
-    color: '#796120'
+    color: '#796120',
   },
   removeButton: {
     padding: 10,
@@ -147,17 +227,16 @@ const styles = StyleSheet.create({
   totalText: {
     fontSize: 20,
     marginBottom: 10,
-    color: '#796120'
+    color: '#796120',
   },
   buttonContainer: {
     backgroundColor: '#918CFE',
     padding: 10,
     width: width * 0.9,
-
+    alignItems: 'center',
   },
   panierText: {
     marginTop: 20,
-
   },
   textPanier: {
     fontSize: width * 0.08,
@@ -172,6 +251,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: width * 0.9,
-  }
-
+  },
+  textPayer: {
+    color: '#fff',
+    fontSize: 16,
+  },
 });

@@ -47,7 +47,7 @@ export default function User({ navigation }) {
                     <TouchableOpacity onPress={handleLogout} style={styles.buttons}>
                         <Text style={styles.text}>Deconnexion</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.buttons}>
+                    <TouchableOpacity onPress={() => navigation.navigate('Commandes')} style={styles.buttons}>
                         <Text style={styles.text}>Commandes</Text>
                     </TouchableOpacity>
                 </View>

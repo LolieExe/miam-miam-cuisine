@@ -10,6 +10,7 @@ import Cart from './src/screens/Cart';
 import { CartProvider } from './src/components/organics/CartContext';
 import Splash from './src/screens/Splash';
 import User from './src/screens/User';
+import Commandes from './src/screens/Commandes';
 
 const Stack = createStackNavigator();
 
@@ -52,6 +53,7 @@ export default function App() {
           <Stack.Screen name="Home" component={Home} />
           <Stack.Screen name="Cart" component={Cart} />
           <Stack.Screen name="User" component={User} />
+          <Stack.Screen name="Commandes" component={Commandes} />
         </Stack.Navigator>
       </NavigationContainer>
     </CartProvider>

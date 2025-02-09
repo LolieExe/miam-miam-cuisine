@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { TextInput, StyleSheet, Text, View, Alert,Dimensions } from "react-native";
+import { TextInput, StyleSheet, Text, View, Alert, Dimensions } from "react-native";
 import ValidateButton from "../components/atoms/ValidateButtons";
 import Inputs from "../components/atoms/Inputs";
 import { auth } from "../services/firebaseConfig";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-
+import axios from 'axios';
 
 const { width, height } = Dimensions.get('window');
 
@@ -21,8 +21,29 @@ export default function SignUp({ navigation }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      Alert.alert("Sign Up Successful", `Welcome ${user.email}`);
-      navigation.navigate('Login');
+
+      // Prepare user data for the backend
+      const userData = {
+        firebaseUid: user.uid,
+        email: user.email,
+        name: user.email,
+        createdAt: new Date().toISOString()
+      };
+
+      // Send user data to the backend
+      try {
+        const response = await axios.post('https://miammiam3-production.up.railway.app/api/users', userData, {
+          headers: {
+            'Content-Type': 'application/ld+json'
+          }
+        });
+        console.log('User saved to backend:', response.data);
+        Alert.alert("Sign Up Successful", `Welcome ${user.email}`);
+        navigation.navigate('Login');
+      } catch (error) {
+        console.error('Error saving user to backend:', error);
+        Alert.alert("Error", "Failed to save user data. Please try again.");
+      }
     } catch (error) {
       const errorCode = error.code;
       const errorMessage = error.message;
@@ -67,5 +88,4 @@ const styles = StyleSheet.create({
     color: '#796120',
     marginBottom: 20,
   },
-  
 });
