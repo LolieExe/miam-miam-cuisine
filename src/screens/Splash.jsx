@@ -52,6 +52,7 @@ export default function Splash({ navigation }) {
         <View style={styles.textContainer}>
             <Text style={styles.miam}>MIAM MIAM</Text>
             <Text style={styles.cuisine}>CUISINE</Text>
+            <Text style={styles.text}>Laisse l'enfant en toi se reveiller</Text>
         </View>
         </View>
     );
@@ -75,6 +76,12 @@ const styles = StyleSheet.create({
   },
   cuisine: {
     fontSize: width * 0.2,
+    color: '#796120',
+    textAlign: 'center',
+    fontWeight: 'light',
+  },
+  text: {
+    fontSize: width * 0.1,
     color: '#796120',
     textAlign: 'center',
     fontWeight: 'light',
